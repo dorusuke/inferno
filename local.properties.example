@@ -1,0 +1,5 @@
+# Android Studio creates local.properties for you (it adds sdk.dir).
+# Add these two lines to it. Never commit that file or share the built APK publicly,
+# the key is baked into the app.
+GEMINI_API_KEY=paste_your_key_here
+GEMINI_MODEL=gemini-2.5-flash
