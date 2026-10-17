@@ -8,7 +8,6 @@ import android.app.Service
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.drawable.Icon
-import android.media.AudioAttributes
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
@@ -19,8 +18,6 @@ import android.os.Looper
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -29,7 +26,6 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.util.Locale
 
 /**
  * The always-on part. Listens for "Hey Inferno", asks Gemini, speaks the answer,
@@ -38,7 +34,7 @@ import java.util.Locale
  * Only one thing can use the mic at a time, so wake-word listening pauses while a recording runs.
  * Stop a recording from the notification, the app, or by typing "stop recording".
  */
-class VoiceService : Service(), TextToSpeech.OnInitListener, PhoneActions.RecordingControl {
+class VoiceService : Service(), PhoneActions.RecordingControl {
 
     companion object {
         const val ACTION_ASK = "com.inferno.os.ASK"
@@ -60,10 +56,9 @@ class VoiceService : Service(), TextToSpeech.OnInitListener, PhoneActions.Record
     private val handler = Handler(Looper.getMainLooper())
     private val listenRunnable = Runnable { beginListening() }
 
-    private lateinit var tts: TextToSpeech
+    private lateinit var speaker: Speaker
     private lateinit var brain: Brain
     private lateinit var recorder: Recorder
-    private var ttsReady = false
     private var recognizer: SpeechRecognizer? = null
     private var mode = Mode.WAKE
     private var running = false
@@ -71,7 +66,6 @@ class VoiceService : Service(), TextToSpeech.OnInitListener, PhoneActions.Record
     private var pendingRecord = false
     private var glassesRouted = false
     private var recJob: Job? = null
-    private var utterance = 0
     private var lastStatus = ""
 
     // ---------------------------------------------------------------- lifecycle
@@ -79,6 +73,7 @@ class VoiceService : Service(), TextToSpeech.OnInitListener, PhoneActions.Record
     override fun onCreate() {
         super.onCreate()
         running = true
+        Prefs.init(this)
         createChannel()
         startForeground(
             NOTIF_ID, buildNotification("Starting…"),
@@ -86,9 +81,11 @@ class VoiceService : Service(), TextToSpeech.OnInitListener, PhoneActions.Record
         )
         recorder = Recorder(this)
         brain = Brain(PhoneActions(this, this))
-        tts = TextToSpeech(this, this)
+        speaker = Speaker(this, scope) { afterSpeech() }
+        speaker.start { listenSoon(0) }
         getSystemService(AudioManager::class.java).registerAudioDeviceCallback(deviceCb, handler)
         refreshGlasses()
+        Recordings.refresh(this)
         InfernoState.serviceOn.value = true
     }
 
@@ -111,7 +108,8 @@ class VoiceService : Service(), TextToSpeech.OnInitListener, PhoneActions.Record
         handler.removeCallbacksAndMessages(null)
         recognizer?.destroy()
         recognizer = null
-        if (::tts.isInitialized) tts.shutdown()
+        Quiet.off(this)
+        if (::speaker.isInitialized) speaker.shutdown()
         if (recorder.isRecording) recorder.stop()
         getSystemService(AudioManager::class.java).unregisterAudioDeviceCallback(deviceCb)
         if (glassesRouted) Audio.release(this)
@@ -148,42 +146,18 @@ class VoiceService : Service(), TextToSpeech.OnInitListener, PhoneActions.Record
 
     // ---------------------------------------------------------------- speech out
 
-    override fun onInit(status: Int) {
-        ttsReady = status == TextToSpeech.SUCCESS
-        if (!ttsReady) {
-            setStatus("Text-to-speech isn't available")
-        } else {
-            val r = tts.setLanguage(Locale.getDefault())
-            if (r == TextToSpeech.LANG_MISSING_DATA || r == TextToSpeech.LANG_NOT_SUPPORTED) {
-                tts.setLanguage(Locale.US)
-            }
-            tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String?) {}
-                override fun onDone(utteranceId: String?) { handler.post { afterSpeech() } }
-                @Deprecated("Deprecated in Java")
-                override fun onError(utteranceId: String?) { handler.post { afterSpeech() } }
-            })
-        }
-        listenSoon(0)
-    }
-
     private fun speak(text: String) {
         InfernoState.lastReply.value = text
         val clean = text.replace(Regex("[*#_`~>]"), "").take(3500)
-        if (!ttsReady || clean.isBlank()) {
+        if (clean.isBlank()) {
             afterSpeech()
             return
         }
         speaking = true
         setStatus("Speaking…")
         recognizer?.cancel()
-        tts.setAudioAttributes(
-            AudioAttributes.Builder()
-                .setUsage(if (glassesRouted) AudioAttributes.USAGE_VOICE_COMMUNICATION else AudioAttributes.USAGE_ASSISTANT)
-                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                .build()
-        )
-        tts.speak(clean, TextToSpeech.QUEUE_FLUSH, null, "u${++utterance}")
+        Quiet.off(this)
+        speaker.speak(clean, glassesRouted)
     }
 
     private fun afterSpeech() {
@@ -193,7 +167,14 @@ class VoiceService : Service(), TextToSpeech.OnInitListener, PhoneActions.Record
             startRecordingNow()
             return
         }
-        listenSoon(150)
+        if (mode == Mode.COMMAND) {
+            // Soft "go ahead" ping, then listen for the actual question.
+            Quiet.off(this)
+            val d = Sounds.play(Sounds.Kind.READY, glassesRouted)
+            listenSoon(d + 100)
+        } else {
+            listenSoon(150)
+        }
     }
 
     // ---------------------------------------------------------------- speech in
@@ -218,6 +199,7 @@ class VoiceService : Service(), TextToSpeech.OnInitListener, PhoneActions.Record
             putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
             putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, packageName)
         }
+        Quiet.on(this) // hides the recognizer's start/stop beeps
         recognizer?.startListening(i)
         InfernoState.listening.value = true
         setStatus(if (mode == Mode.WAKE) "Say “Hey Inferno”" else "Listening…")
@@ -273,10 +255,14 @@ class VoiceService : Service(), TextToSpeech.OnInitListener, PhoneActions.Record
             return
         }
         val cmd = text.substring(m.range.last + 1).trim { it in " ,.!?" }
+        Quiet.off(this)
         if (cmd.isBlank()) {
             mode = Mode.COMMAND
-            speak(GREETING)
+            val d = Sounds.play(Sounds.Kind.WAKE, glassesRouted)
+            speaking = true
+            handler.postDelayed({ if (running) speak(GREETING) }, d)
         } else {
+            Sounds.play(Sounds.Kind.READY, glassesRouted)
             processCommand(cmd)
         }
     }
@@ -292,9 +278,18 @@ class VoiceService : Service(), TextToSpeech.OnInitListener, PhoneActions.Record
                 brain.ask(text)
             } catch (e: Exception) {
                 error = e.message
-                "Sorry, I couldn't get an answer just now."
+                when {
+                    error?.contains("429") == true -> "I've hit the Gemini usage limit for now. Try again later."
+                    error?.startsWith("Not signed in") == true -> "Open the app and sign in, or add an API key in your profile."
+                    else -> "Sorry, I couldn't get an answer just now."
+                }
             }
             InfernoState.busy.value = false
+            if (error != null) {
+                Quiet.off(this@VoiceService)
+                val d = Sounds.play(Sounds.Kind.ERROR, glassesRouted)
+                delay(d / 2)
+            }
             speak(reply)
             if (error != null) InfernoState.lastReply.value = "Error: $error"
         }
@@ -320,7 +315,9 @@ class VoiceService : Service(), TextToSpeech.OnInitListener, PhoneActions.Record
         InfernoState.listening.value = false
         recognizer?.cancel()
         scope.launch {
-            delay(400) // let the recognizer release the mic
+            Quiet.off(this@VoiceService)
+            val d = Sounds.play(Sounds.Kind.REC_START, glassesRouted)
+            delay(d + 150) // chime first so it isn't recorded; also lets the recognizer release the mic
             try {
                 recorder.start(glassesRouted)
             } catch (e: Exception) {
@@ -343,7 +340,7 @@ class VoiceService : Service(), TextToSpeech.OnInitListener, PhoneActions.Record
             InfernoState.busy.value = true
             val (ok, msg) = finishRecording()
             InfernoState.busy.value = false
-            speak(if (ok) "Recording stopped. Your brief is ready." else msg)
+            speak(if (ok) "Recording stopped. Your brief is ready in Recordings." else msg)
         }
     }
 
@@ -352,15 +349,20 @@ class VoiceService : Service(), TextToSpeech.OnInitListener, PhoneActions.Record
         recJob = null
         val f = withContext(Dispatchers.IO) { recorder.stop() }
         InfernoState.recording.value = false
+        Quiet.off(this)
+        Sounds.play(Sounds.Kind.REC_STOP, glassesRouted)
         if (f == null) return false to "That recording was too short to save."
+        Recordings.refresh(this)
+        val id = f.name.removePrefix("rec_").removeSuffix(".aac").toLongOrNull()
+            ?: return false to "I saved the recording, but couldn't write the brief."
         setStatus("Writing your brief…")
         return try {
-            val text = Briefs.make(f)
-            Briefs.save(this, text, f)
-            InfernoState.briefs.value = Briefs.load(this)
+            val text = Recordings.makeBrief(f)
+            Recordings.saveBrief(this, id, text)
+            Recordings.refresh(this)
             true to text.take(3000)
         } catch (e: Exception) {
-            false to "I saved the recording, but couldn't write the brief."
+            false to "I saved the recording. You can make the brief later from Recordings."
         }
     }
 

@@ -28,7 +28,7 @@ class PhoneActions(private val ctx: Context, private val rec: RecordingControl) 
             "read_whatsapp" -> readWhatsApp(a.optString("from"))
             "start_recording" -> rec.start()
             "stop_recording" -> rec.stop()
-            "last_brief" -> InfernoState.briefs.value.firstOrNull()?.text?.take(3000)
+            "last_brief" -> InfernoState.recordings.value.firstOrNull { it.brief != null }?.brief?.take(3000)
                 ?: "There are no saved briefs yet."
             else -> "Unknown action $name."
         }

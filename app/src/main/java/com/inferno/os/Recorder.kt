@@ -8,9 +8,6 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 /** Small speech-grade AAC recorder: about 4 KB per second, so ~50 minutes fits one Gemini request. */
 class Recorder(private val ctx: Context) {
@@ -61,7 +58,8 @@ class Recorder(private val ctx: Context) {
     }
 }
 
-object Briefs {
+/** Saved recordings and their briefs. Audio is rec_ID.aac, the brief is brief_ID.txt. */
+object Recordings {
     private const val MAX_BYTES = 14_000_000L
 
     private const val PROMPT = """Listen to this recorded conversation and write a brief for the person who recorded it.
@@ -74,7 +72,32 @@ OPEN QUESTIONS (or "None")
 TRANSCRIPT (speaker labels like Speaker 1, Speaker 2)
 Only use what is actually said. If the audio is silent or unintelligible, say so in one line and skip the rest."""
 
-    suspend fun make(file: File): String {
+    fun list(ctx: Context): List<Rec> {
+        val files = ctx.filesDir.listFiles { f -> f.name.startsWith("rec_") && f.extension == "aac" }
+            ?: return emptyList()
+        return files.mapNotNull { f ->
+            val id = f.name.removePrefix("rec_").removeSuffix(".aac").toLongOrNull()
+                ?: return@mapNotNull null
+            val b = File(ctx.filesDir, "brief_$id.txt")
+            Rec(id, f, if (b.exists()) b.readText() else null)
+        }.sortedByDescending { it.id }
+    }
+
+    fun refresh(ctx: Context) {
+        InfernoState.recordings.value = list(ctx)
+    }
+
+    fun saveBrief(ctx: Context, id: Long, text: String) {
+        File(ctx.filesDir, "brief_$id.txt").writeText(text)
+    }
+
+    fun delete(ctx: Context, id: Long) {
+        File(ctx.filesDir, "rec_$id.aac").delete()
+        File(ctx.filesDir, "brief_$id.txt").delete()
+        refresh(ctx)
+    }
+
+    suspend fun makeBrief(file: File): String {
         if (file.length() > MAX_BYTES) error("That recording is too long to brief in one go.")
         val b64 = withContext(Dispatchers.IO) { Base64.encodeToString(file.readBytes(), Base64.NO_WRAP) }
         val parts = JSONArray()
@@ -86,17 +109,11 @@ Only use what is actually said. If the audio is silent or unintelligible, say so
         return text
     }
 
-    fun save(ctx: Context, text: String, audio: File) {
-        File(ctx.filesDir, audio.name.replace("rec_", "brief_").replace(".aac", ".txt")).writeText(text)
-    }
-
-    fun load(ctx: Context): List<Brief> {
-        val fmt = SimpleDateFormat("d MMM, h:mm a", Locale.getDefault())
-        return ctx.filesDir.listFiles { f -> f.name.startsWith("brief_") && f.extension == "txt" }
-            ?.sortedByDescending { it.name }
-            ?.map { f ->
-                val ts = f.name.removePrefix("brief_").removeSuffix(".txt").toLongOrNull()
-                Brief(if (ts != null) fmt.format(Date(ts)) else f.name, f.readText())
-            } ?: emptyList()
+    /** Writes (or rewrites) the brief for one recording and refreshes the list. */
+    suspend fun brief(ctx: Context, rec: Rec): String {
+        val text = makeBrief(rec.audio)
+        saveBrief(ctx, rec.id, text)
+        refresh(ctx)
+        return text
     }
 }
