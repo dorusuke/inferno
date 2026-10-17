@@ -88,13 +88,13 @@ class PhoneActions(private val ctx: Context, private val rec: RecordingControl) 
             return Contact(q, q.filter { it.isDigit() || it == '+' })
         }
         if (!has(Manifest.permission.READ_CONTACTS)) return null
-        val phone = ContactsContract.CommonDataKinds.Phone
         ctx.contentResolver.query(
-            phone.CONTENT_URI,
-            arrayOf(phone.DISPLAY_NAME, phone.NUMBER),
-            "${phone.DISPLAY_NAME} LIKE ?",
-            arrayOf("%$q%"),
-            null
+            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+            arrayOf(
+                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                ContactsContract.CommonDataKinds.Phone.NUMBER
+            ),
+            "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?
         )?.use { c ->
             var best: Contact? = null
             while (c.moveToNext()) {
