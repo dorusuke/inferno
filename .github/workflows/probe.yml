@@ -1,0 +1,56 @@
+name: Probe URLs
+on:
+  workflow_dispatch:
+  push:
+    paths: [".github/workflows/probe.yml"]
+permissions:
+  contents: write
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check URLs
+        run: |
+          B=https://github.com/k2-fsa/sherpa-onnx/releases/download
+          {
+            for u in \
+              v1.13.7/sherpa-onnx-1.13.7.aar \
+              asr-models/sherpa-onnx-whisper-tiny.en.tar.bz2 \
+              asr-models/sherpa-onnx-whisper-base.en.tar.bz2 \
+              tts-models/vits-piper-en_US-amy-low.tar.bz2 \
+              tts-models/vits-piper-en_US-amy-medium.tar.bz2 \
+              tts-models/vits-piper-en_US-ryan-medium.tar.bz2 \
+              tts-models/vits-piper-en_US-ryan-high.tar.bz2 \
+              tts-models/vits-piper-en_US-lessac-medium.tar.bz2 \
+              tts-models/vits-piper-en_US-lessac-high.tar.bz2 \
+              tts-models/vits-piper-en_US-libritts_r-medium.tar.bz2 \
+              tts-models/vits-piper-en_US-joe-medium.tar.bz2 \
+              tts-models/vits-piper-en_US-kathleen-low.tar.bz2 \
+              tts-models/vits-piper-en_US-hfc_female-medium.tar.bz2 \
+              tts-models/vits-piper-en_US-hfc_male-medium.tar.bz2 \
+              tts-models/vits-piper-en_US-norman-medium.tar.bz2 \
+              tts-models/vits-piper-en_US-kristin-medium.tar.bz2 \
+              tts-models/vits-piper-en_GB-alan-medium.tar.bz2 \
+              tts-models/vits-piper-en_GB-jenny_dioco-medium.tar.bz2 \
+              tts-models/vits-piper-en_GB-northern_english_male-medium.tar.bz2 \
+              tts-models/vits-piper-en_GB-alba-medium.tar.bz2 \
+              tts-models/vits-piper-en_GB-southern_english_female-low.tar.bz2 \
+              tts-models/kokoro-en-v0_19.tar.bz2 \
+              tts-models/kokoro-int8-multi-lang-v1_1.tar.bz2 \
+              tts-models/kokoro-multi-lang-v1_0.tar.bz2 \
+              tts-models/kitten-nano-en-v0_1-fp16.tar.bz2 ; do
+              r=$(curl -sL -r 0-0 -D - -o /dev/null "$B/$u" | tr -d '\r' | grep -iE "^(HTTP|content-range)" | tail -2 | tr '\n' ' ')
+              echo "$u -> $r"
+            done
+          } > probe.txt 2>&1
+          cat probe.txt
+          mkdir /tmp/out && cp probe.txt /tmp/out/
+          git config user.name build-bot
+          git config user.email build-bot@users.noreply.github.com
+          git checkout --orphan probe-output
+          git rm -rf . > /dev/null 2>&1 || true
+          cp /tmp/out/probe.txt .
+          git add probe.txt
+          git commit -m "probe ${{ github.sha }}"
+          git push -f origin probe-output
