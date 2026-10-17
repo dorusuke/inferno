@@ -13,6 +13,8 @@ object Gemini {
     private const val BASE = "https://generativelanguage.googleapis.com/v1beta/models/"
     private const val TTS_MODEL = "gemini-2.5-flash-preview-tts"
 
+    private class ApiError(val code: Int, msg: String) : Exception(msg)
+
     suspend fun generate(
         contents: JSONArray,
         system: String? = null,
@@ -21,8 +23,15 @@ object Gemini {
         config: JSONObject? = null,
     ): JSONObject = withContext(Dispatchers.IO) {
         val bearer = GoogleAuth.bearer()
-        if (bearer == null && Keys.current.isBlank()) {
-            error("Not signed in. Open your profile in the app and sign in or add an API key.")
+        val key = Keys.current
+        if (bearer == null && key.isBlank()) {
+            error(
+                if (GoogleAuth.signedIn) {
+                    "Not signed in. The Google session expired or was refused. Open your profile and sign in again, or add an API key."
+                } else {
+                    "Not signed in. Open your profile in the app and sign in or add an API key."
+                }
+            )
         }
         val body = JSONObject().put("contents", contents)
         if (system != null) {
@@ -34,6 +43,21 @@ object Gemini {
         if (tools != null) body.put("tools", tools)
         if (config != null) body.put("generationConfig", config)
 
+        val json = try {
+            if (bearer != null) call(body, model, bearer, null) else call(body, model, null, key)
+        } catch (e: ApiError) {
+            // Google account refused (API not enabled, no access, expired): retry with the API key if there is one.
+            if (bearer != null && key.isNotBlank() && (e.code == 401 || e.code == 403)) {
+                call(body, model, null, key)
+            } else {
+                throw e
+            }
+        }
+        Usage.record(json.optJSONObject("usageMetadata")?.optLong("totalTokenCount", 0L) ?: 0L)
+        json
+    }
+
+    private fun call(body: JSONObject, model: String, bearer: String?, key: String?): JSONObject {
         val conn = URL(BASE + model + ":generateContent").openConnection() as HttpURLConnection
         try {
             conn.requestMethod = "POST"
@@ -43,18 +67,19 @@ object Gemini {
             conn.setRequestProperty("Content-Type", "application/json")
             if (bearer != null) {
                 conn.setRequestProperty("Authorization", "Bearer $bearer")
-            } else {
-                conn.setRequestProperty("x-goog-api-key", Keys.current)
+            } else if (key != null) {
+                conn.setRequestProperty("x-goog-api-key", key)
             }
             conn.outputStream.use { it.write(body.toString().toByteArray()) }
 
             val code = conn.responseCode
             val stream = if (code in 200..299) conn.inputStream else conn.errorStream
             val text = stream?.bufferedReader()?.use { it.readText() } ?: ""
-            if (code !in 200..299) error("Gemini error $code: ${text.take(300)}")
-            val json = JSONObject(text)
-            Usage.record(json.optJSONObject("usageMetadata")?.optLong("totalTokenCount", 0L) ?: 0L)
-            json
+            if (code !in 200..299) {
+                val who = if (bearer != null) "Google account" else "API key"
+                throw ApiError(code, "Gemini error $code ($who): ${text.take(400)}")
+            }
+            return JSONObject(text)
         } finally {
             conn.disconnect()
         }
