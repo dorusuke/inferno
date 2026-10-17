@@ -21,6 +21,7 @@ android {
         targetSdk = 35
         versionCode = 3
         versionName = "3.0"
+        ndk { abiFilters += listOf("arm64-v8a") }
         buildConfigField("String", "GEMINI_API_KEY", "\"${localProps.getProperty("GEMINI_API_KEY", "")}\"")
         buildConfigField("String", "GEMINI_MODEL", "\"${localProps.getProperty("GEMINI_MODEL", "gemini-3.8-flash")}\"")
     }
