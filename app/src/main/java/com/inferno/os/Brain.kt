@@ -1,5 +1,6 @@
 package com.inferno.os
 
+import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDateTime
@@ -9,11 +10,23 @@ import java.time.format.DateTimeFormatter
 class Brain(private val actions: PhoneActions) {
     private val history = JSONArray()
 
-    suspend fun ask(text: String): String {
+    suspend fun ask(text: String): String = send(Gemini.userText(text), false)
+
+    /** A spoken command as WAV audio. Gemini hears it directly. */
+    suspend fun askAudio(wav: ByteArray): String {
+        val b64 = Base64.encodeToString(wav, Base64.NO_WRAP)
+        val parts = JSONArray()
+            .put(JSONObject().put("text", "The user just spoke this to you. Respond to what they said. Ignore the wake phrase Hey Inferno."))
+            .put(JSONObject().put("inlineData", JSONObject().put("mimeType", "audio/wav").put("data", b64)))
+        return send(JSONObject().put("role", "user").put("parts", parts), true)
+    }
+
+    private suspend fun send(userContent: JSONObject, audio: Boolean): String {
         val mark = history.length()
         try {
-            history.put(Gemini.userText(text))
+            history.put(userContent)
             trim()
+            val userIdx = history.length() - 1
             for (step in 0 until 5) {
                 val resp = Gemini.generate(history, system(), TOOLS)
                 val content = resp.optJSONArray("candidates")?.optJSONObject(0)?.optJSONObject("content")
@@ -22,7 +35,11 @@ class Brain(private val actions: PhoneActions) {
                 val parts = content.optJSONArray("parts") ?: JSONArray()
                 val calls = (0 until parts.length()).map { parts.getJSONObject(it) }
                     .filter { it.has("functionCall") }
-                if (calls.isEmpty()) return Gemini.textOf(resp).ifBlank { "Done." }
+                if (calls.isEmpty()) {
+                    // Keep history light: swap the audio for a text marker once it has been answered.
+                    if (audio) history.put(userIdx, Gemini.userText("(voice message)"))
+                    return Gemini.textOf(resp).ifBlank { "Done." }
+                }
 
                 val results = JSONArray()
                 for (c in calls) {

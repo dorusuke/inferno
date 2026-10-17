@@ -67,6 +67,8 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
     private var glassesRouted = false
     private var recJob: Job? = null
     private var lastStatus = ""
+    private var wake: WakeEngine? = null
+    private var wakeReady = false
 
     // ---------------------------------------------------------------- lifecycle
 
@@ -82,7 +84,8 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
         recorder = Recorder(this)
         brain = Brain(PhoneActions(this, this))
         speaker = Speaker(this, scope) { afterSpeech() }
-        speaker.start { listenSoon(0) }
+        speaker.start()
+        prepareWake()
         getSystemService(AudioManager::class.java).registerAudioDeviceCallback(deviceCb, handler)
         refreshGlasses()
         Recordings.refresh(this)
@@ -109,6 +112,8 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
         recognizer?.destroy()
         recognizer = null
         Quiet.off(this)
+        wake?.close()
+        wake = null
         if (::speaker.isInitialized) speaker.shutdown()
         if (recorder.isRecording) recorder.stop()
         getSystemService(AudioManager::class.java).unregisterAudioDeviceCallback(deviceCb)
@@ -156,6 +161,7 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
         speaking = true
         setStatus("Speaking…")
         recognizer?.cancel()
+        wake?.stop()
         Quiet.off(this)
         speaker.speak(clean, glassesRouted)
     }
@@ -177,6 +183,63 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
         }
     }
 
+    // ---------------------------------------------------------------- offline wake word
+
+    private val wakeCb = object : WakeEngine.Callback {
+        override fun onWake(inlineWav: ByteArray?) { handler.post { handleWake(inlineWav) } }
+        override fun onCommand(wav: ByteArray?) { handler.post { handleCommandAudio(wav) } }
+        override fun onFailure() {
+            handler.post {
+                InfernoState.listening.value = false
+                setStatus("Mic busy, retrying…")
+                listenSoon(1500)
+            }
+        }
+    }
+
+    private fun prepareWake() {
+        scope.launch {
+            setStatus("Preparing wake word…")
+            val ok = withContext(Dispatchers.IO) {
+                try {
+                    val dir = WakeModel.download(this@VoiceService) { p ->
+                        handler.post { setStatus("Downloading wake-word model $p%") }
+                    }
+                    if (dir == null) {
+                        false
+                    } else {
+                        wake = WakeEngine(dir, wakeCb)
+                        true
+                    }
+                } catch (e: Throwable) {
+                    false
+                }
+            }
+            wakeReady = ok && wake != null
+            if (!wakeReady) setStatus("Wake-word model unavailable, using the phone's listener")
+            listenSoon(0)
+        }
+    }
+
+    private fun handleWake(inlineWav: ByteArray?) {
+        InfernoState.listening.value = false
+        if (inlineWav != null) {
+            Sounds.play(Sounds.Kind.READY, glassesRouted)
+            processAudio(inlineWav)
+        } else {
+            mode = Mode.COMMAND
+            val d = Sounds.play(Sounds.Kind.WAKE, glassesRouted)
+            speaking = true
+            handler.postDelayed({ if (running) speak(GREETING) }, d)
+        }
+    }
+
+    private fun handleCommandAudio(wav: ByteArray?) {
+        InfernoState.listening.value = false
+        mode = Mode.WAKE
+        if (wav == null) listenSoon(200) else processAudio(wav)
+    }
+
     // ---------------------------------------------------------------- speech in
 
     private fun listenSoon(delayMs: Long) {
@@ -186,6 +249,12 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
 
     private fun beginListening() {
         if (!running || speaking || recorder.isRecording || InfernoState.busy.value) return
+        if (wakeReady) {
+            InfernoState.listening.value = true
+            setStatus(if (mode == Mode.WAKE) "Say “Hey Inferno”" else "Listening…")
+            wake?.start(mode == Mode.COMMAND, glassesRouted)
+            return
+        }
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
             setStatus("No speech recognition service on this phone")
             return
@@ -270,12 +339,22 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
     private fun processCommand(text: String) {
         if (InfernoState.busy.value) return
         InfernoState.lastHeard.value = text
+        runAsk { brain.ask(text) }
+    }
+
+    private fun processAudio(wav: ByteArray) {
+        if (InfernoState.busy.value) return
+        InfernoState.lastHeard.value = "Voice message"
+        runAsk { brain.askAudio(wav) }
+    }
+
+    private fun runAsk(block: suspend () -> String) {
         InfernoState.busy.value = true
         setStatus("Thinking…")
         scope.launch {
             var error: String? = null
             val reply = try {
-                brain.ask(text)
+                block()
             } catch (e: Exception) {
                 error = e.message
                 when {
@@ -314,6 +393,7 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
         handler.removeCallbacks(listenRunnable)
         InfernoState.listening.value = false
         recognizer?.cancel()
+        wake?.stop()
         scope.launch {
             Quiet.off(this@VoiceService)
             val d = Sounds.play(Sounds.Kind.REC_START, glassesRouted)

@@ -625,25 +625,6 @@ private fun ProfileScreen(onBack: () -> Unit, onVoice: () -> Unit) {
             )
         }
 
-        Label("Sounds")
-        Row(
-            Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(CardBg).padding(20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text("Silence listening beeps", fontSize = 16.sp, color = Ink)
-                Text(
-                    "Mutes media volume while Inferno listens, so the system beep can't be heard.",
-                    fontSize = 13.sp, color = Mute, lineHeight = 18.sp
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Switch(
-                checked = quiet,
-                onCheckedChange = { Prefs.setQuiet(it) },
-                colors = SwitchDefaults.colors(checkedTrackColor = Ink)
-            )
-        }
         Spacer(Modifier.height(32.dp))
     }
 }
