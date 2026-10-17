@@ -88,23 +88,28 @@ class PhoneActions(private val ctx: Context, private val rec: RecordingControl) 
             return Contact(q, q.filter { it.isDigit() || it == '+' })
         }
         if (!has(Manifest.permission.READ_CONTACTS)) return null
-        ctx.contentResolver.query(
-            ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
-            arrayOf(
-                ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
-                ContactsContract.CommonDataKinds.Phone.NUMBER
-            ),
-            "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} LIKE ?
-        )?.use { c ->
-            var best: Contact? = null
-            while (c.moveToNext()) {
-                val n = c.getString(0) ?: continue
-                val num = c.getString(1) ?: continue
-                if (n.equals(q, ignoreCase = true)) return Contact(n, num)
-                val b = best
-                if (b == null || n.length < b.name.length) best = Contact(n, num)
+        val uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI
+        val nameCol = ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME
+        val numCol = ContactsContract.CommonDataKinds.Phone.NUMBER
+        val cursor = ctx.contentResolver.query(
+            uri,
+            arrayOf(nameCol, numCol),
+            nameCol + " LIKE ?",
+            arrayOf("%" + q + "%"),
+            null
+        )
+        if (cursor != null) {
+            cursor.use { c ->
+                var best: Contact? = null
+                while (c.moveToNext()) {
+                    val n = c.getString(0) ?: continue
+                    val num = c.getString(1) ?: continue
+                    if (n.equals(q, ignoreCase = true)) return Contact(n, num)
+                    val b = best
+                    if (b == null || n.length < b.name.length) best = Contact(n, num)
+                }
+                return best
             }
-            return best
         }
         return null
     }
