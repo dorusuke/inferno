@@ -11,10 +11,7 @@ import org.vosk.Recognizer
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import java.util.zip.ZipInputStream
-import kotlin.math.sqrt
 
 /** Downloads the small offline speech model once (about 40 MB). */
 object WakeModel {
@@ -91,10 +88,10 @@ object WakeModel {
  */
 class WakeEngine(modelDir: File, private val cb: Callback) {
     interface Callback {
-        /** Wake word heard. [inlineWav] is the command if it was said in the same breath, else null. */
-        fun onWake(inlineWav: ByteArray?)
+        /** Wake word heard. [inlinePcm] is the command if it was said in the same breath, else null. */
+        fun onWake(inlinePcm: ShortArray?)
         /** Result of a command capture. Null if nothing was said. */
-        fun onCommand(wav: ByteArray?)
+        fun onCommand(pcm: ShortArray?)
         fun onFailure()
     }
 
@@ -132,7 +129,13 @@ class WakeEngine(modelDir: File, private val cb: Callback) {
         try { model.close() } catch (e: Exception) { }
     }
 
-    private fun isWake(text: String): Boolean = text.contains("inferno") || text.contains("in for no")
+    private fun isWake(text: String): Boolean = WakeText.isWake(text)
+
+    /** Mic the last session actually used, so the UI can show glasses vs phone. */
+    @Volatile var route = ""
+
+    private var ctx: Context? = null
+    fun attach(c: Context) { ctx = c.applicationContext }
 
     private fun run(my: Int, command: Boolean, glasses: Boolean) {
         val src = if (glasses) MediaRecorder.AudioSource.VOICE_COMMUNICATION else MediaRecorder.AudioSource.VOICE_RECOGNITION
@@ -148,14 +151,20 @@ class WakeEngine(modelDir: File, private val cb: Callback) {
             return
         }
         try {
+            if (glasses) {
+                ctx?.let { c -> Audio.glassesMic(c)?.let { ar.setPreferredDevice(it) } }
+            }
             ar.startRecording()
+            route = Audio.label(ar.routedDevice?.type)
             if (command) {
                 val pcm = capture(ar, my, emptyList(), 6000)
-                if (token == my) cb.onCommand(pcm?.let { wav(it) })
+                if (token == my) cb.onCommand(pcm)
             } else {
                 rec.reset()
+                val gate = EnergyGate()
                 val chunk = ShortArray(1600)
                 val ring = ArrayDeque<ShortArray>()
+                var lastWake = 0L
                 while (token == my) {
                     val n = ar.read(chunk, 0, chunk.size)
                     if (n < 0) {
@@ -166,16 +175,22 @@ class WakeEngine(modelDir: File, private val cb: Callback) {
                     val c = chunk.copyOf(n)
                     ring.addLast(c)
                     while (ring.size > 25) ring.removeFirst()
+                    // Silence and steady noise never reach the recognizer, which is most of the idle saving.
+                    val step = gate.step(Pcm.rms(c, n))
+                    if (step.closed) rec.reset()
+                    if (!step.feed) continue
                     val fin = rec.acceptWaveForm(c, n)
                     val text = if (fin) {
                         JSONObject(rec.result).optString("text")
                     } else {
                         JSONObject(rec.partialResult).optString("partial")
                     }
-                    if (isWake(text)) {
+                    val now = SystemClock.elapsedRealtime()
+                    if (isWake(text) && now - lastWake > 1500) {
+                        lastWake = now
                         rec.reset()
                         val pcm = capture(ar, my, ring.toList(), 700)
-                        if (token == my) cb.onWake(pcm?.let { wav(it) })
+                        if (token == my) cb.onWake(pcm)
                         return
                     }
                 }
@@ -194,7 +209,7 @@ class WakeEngine(modelDir: File, private val cb: Callback) {
      */
     private fun capture(ar: AudioRecord, my: Int, pre: List<ShortArray>, waitMs: Int): ShortArray? {
         val out = ArrayList<ShortArray>(pre)
-        val noise = if (pre.isNotEmpty()) pre.minOf { rms(it, it.size) }.coerceAtLeast(150.0) else 400.0
+        val noise = if (pre.isNotEmpty()) pre.minOf { Pcm.rms(it, it.size) }.coerceAtLeast(150.0) else 400.0
         val thr = maxOf(900.0, noise * 3.0)
         val chunk = ShortArray(1600)
         val start = SystemClock.elapsedRealtime()
@@ -207,7 +222,7 @@ class WakeEngine(modelDir: File, private val cb: Callback) {
             val c = chunk.copyOf(n)
             out.add(c)
             val now = SystemClock.elapsedRealtime()
-            if (rms(c, n) > thr) {
+            if (Pcm.rms(c, n) > thr) {
                 speaking = true
                 lastVoice = now
             }
@@ -218,40 +233,6 @@ class WakeEngine(modelDir: File, private val cb: Callback) {
             }
         }
         if (token != my) return null
-        val total = out.sumOf { it.size }
-        val all = ShortArray(total)
-        var pos = 0
-        for (c in out) {
-            System.arraycopy(c, 0, all, pos, c.size)
-            pos += c.size
-        }
-        return all
-    }
-
-    private fun rms(a: ShortArray, n: Int): Double {
-        if (n == 0) return 0.0
-        var sum = 0.0
-        for (i in 0 until n) sum += a[i].toDouble() * a[i].toDouble()
-        return sqrt(sum / n)
-    }
-
-    private fun wav(pcm: ShortArray): ByteArray {
-        val dataLen = pcm.size * 2
-        val bb = ByteBuffer.allocate(44 + dataLen).order(ByteOrder.LITTLE_ENDIAN)
-        bb.put("RIFF".toByteArray())
-        bb.putInt(36 + dataLen)
-        bb.put("WAVE".toByteArray())
-        bb.put("fmt ".toByteArray())
-        bb.putInt(16)
-        bb.putShort(1)
-        bb.putShort(1)
-        bb.putInt(RATE)
-        bb.putInt(RATE * 2)
-        bb.putShort(2)
-        bb.putShort(16)
-        bb.put("data".toByteArray())
-        bb.putInt(dataLen)
-        for (s in pcm) bb.putShort(s)
-        return bb.array()
+        return Pcm.concat(out)
     }
 }

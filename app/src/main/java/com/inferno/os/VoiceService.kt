@@ -139,7 +139,10 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
         override fun onAudioDevicesRemoved(removedDevices: Array<out AudioDeviceInfo>) = refreshGlasses()
     }
 
+    private var routeRetries = 0
+
     private fun refreshGlasses() {
+        val before = glassesRouted
         val present = Audio.glassesDevice(this) != null
         if (present && !glassesRouted) glassesRouted = Audio.connect(this)
         if (!present && glassesRouted) {
@@ -147,6 +150,20 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
             glassesRouted = false
         }
         InfernoState.glasses.value = glassesRouted
+        if (present && !glassesRouted && routeRetries < 5) {
+            // Right after connecting, Android sometimes isn't ready to route yet. Try again shortly.
+            routeRetries++
+            handler.postDelayed({ if (running) refreshGlasses() }, 1500)
+        }
+        if (glassesRouted) routeRetries = 0
+        if (!present && Audio.outputOnlyBluetooth(this)) {
+            InfernoState.micRoute.value = "Bluetooth is connected for music only, using the phone mic"
+        }
+        if (before != glassesRouted && running) {
+            // Reopen the mic on the new route.
+            wake?.stop()
+            if (!speaking && !recorder.isRecording && !InfernoState.busy.value) listenSoon(500)
+        }
     }
 
     // ---------------------------------------------------------------- speech out
@@ -164,6 +181,10 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
         wake?.stop()
         Quiet.off(this)
         speaker.speak(clean, glassesRouted)
+        // Interrupting only works when the glasses are routed: their echo cancellation keeps Inferno from hearing itself.
+        if (clean != GREETING && glassesRouted && wakeReady && Prefs.bargeIn.value) {
+            handler.postDelayed({ if (running && speaking) wake?.start(false, true) }, 400)
+        }
     }
 
     private fun afterSpeech() {
@@ -186,8 +207,8 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
     // ---------------------------------------------------------------- offline wake word
 
     private val wakeCb = object : WakeEngine.Callback {
-        override fun onWake(inlineWav: ByteArray?) { handler.post { handleWake(inlineWav) } }
-        override fun onCommand(wav: ByteArray?) { handler.post { handleCommandAudio(wav) } }
+        override fun onWake(inlinePcm: ShortArray?) { handler.post { handleWake(inlinePcm) } }
+        override fun onCommand(pcm: ShortArray?) { handler.post { handleCommandAudio(pcm) } }
         override fun onFailure() {
             handler.post {
                 InfernoState.listening.value = false
@@ -208,7 +229,7 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
                     if (dir == null) {
                         false
                     } else {
-                        wake = WakeEngine(dir, wakeCb)
+                        wake = WakeEngine(dir, wakeCb).also { it.attach(this@VoiceService) }
                         true
                     }
                 } catch (e: Throwable) {
@@ -221,11 +242,23 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
         }
     }
 
-    private fun handleWake(inlineWav: ByteArray?) {
+    private fun handleWake(inlinePcm: ShortArray?) {
         InfernoState.listening.value = false
-        if (inlineWav != null) {
+        if (speaking) {
+            // Barge-in: the user said "Hey Inferno" over a reply. Stop talking and listen.
+            speaker.stop()
+            speaking = false
+            brain.noteInterrupted()
             Sounds.play(Sounds.Kind.READY, glassesRouted)
-            processAudio(inlineWav)
+            if (inlinePcm != null) processPcm(inlinePcm) else {
+                mode = Mode.COMMAND
+                listenSoon(250)
+            }
+            return
+        }
+        if (inlinePcm != null) {
+            Sounds.play(Sounds.Kind.READY, glassesRouted)
+            processPcm(inlinePcm)
         } else {
             mode = Mode.COMMAND
             val d = Sounds.play(Sounds.Kind.WAKE, glassesRouted)
@@ -234,10 +267,10 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
         }
     }
 
-    private fun handleCommandAudio(wav: ByteArray?) {
+    private fun handleCommandAudio(pcm: ShortArray?) {
         InfernoState.listening.value = false
         mode = Mode.WAKE
-        if (wav == null) listenSoon(200) else processAudio(wav)
+        if (pcm == null) listenSoon(200) else processPcm(pcm)
     }
 
     // ---------------------------------------------------------------- speech in
@@ -252,7 +285,13 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
         if (wakeReady) {
             InfernoState.listening.value = true
             setStatus(if (mode == Mode.WAKE) "Say “Hey Inferno”" else "Listening…")
+            Whisper.releaseIfIdle()
             wake?.start(mode == Mode.COMMAND, glassesRouted)
+            handler.postDelayed({
+                wake?.route?.takeIf { it.isNotEmpty() }?.let { r ->
+                    InfernoState.micRoute.value = if (glassesRouted && r != "glasses (Bluetooth)") "$r (glasses not used)" else r
+                }
+            }, 800)
             return
         }
         if (!SpeechRecognizer.isRecognitionAvailable(this)) {
@@ -342,10 +381,35 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
         runAsk { brain.ask(text) }
     }
 
-    private fun processAudio(wav: ByteArray) {
+    /** Whisper (if chosen and downloaded) turns the captured command into text; otherwise Gemini hears the audio. */
+    private fun processPcm(pcm: ShortArray) {
         if (InfernoState.busy.value) return
-        InfernoState.lastHeard.value = "Voice message"
-        runAsk { brain.askAudio(wav) }
+        val model = Prefs.stt.value
+        val useWhisper = model != "gemini" && ModelStore.installed(this, model)
+        InfernoState.lastHeard.value = if (useWhisper) "Transcribing…" else "Voice message"
+        runAsk {
+            val spoken = if (useWhisper) {
+                withContext(Dispatchers.Default) {
+                    try { Whisper.transcribe(this@VoiceService, model, pcm) } catch (e: Throwable) { null }
+                }
+            } else null
+            if (spoken != null) {
+                InfernoState.sttInfo.value =
+                    "${spoken.audioMs} ms audio · decode ${spoken.decodeMs} ms · load ${spoken.loadMs} ms"
+                val cmd = WakeText.stripWake(spoken.text)
+                InfernoState.lastHeard.value = spoken.text
+                when {
+                    cmd.isBlank() -> {
+                        mode = Mode.COMMAND
+                        GREETING
+                    }
+                    else -> brain.ask(cmd)
+                }
+            } else {
+                InfernoState.lastHeard.value = "Voice message"
+                brain.askAudio(Pcm.toWav(pcm, 16000))
+            }
+        }
     }
 
     private fun runAsk(block: suspend () -> String) {

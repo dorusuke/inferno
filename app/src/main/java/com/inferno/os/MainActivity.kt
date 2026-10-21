@@ -516,6 +516,7 @@ private fun ProfileScreen(onBack: () -> Unit, onVoice: () -> Unit) {
     val quiet by Prefs.quiet.collectAsStateWithLifecycle()
     val engine by Prefs.engine.collectAsStateWithLifecycle()
     val geminiVoice by Prefs.geminiVoice.collectAsStateWithLifecycle()
+    val localVoice by Prefs.localVoice.collectAsStateWithLifecycle()
     val hasKey by InfernoState.hasKey.collectAsStateWithLifecycle()
 
     var keyInput by remember { mutableStateOf("") }
@@ -620,7 +621,7 @@ private fun ProfileScreen(onBack: () -> Unit, onVoice: () -> Unit) {
             Text("AI voice", color = Mute, fontSize = 13.sp, letterSpacing = 1.5.sp)
             Spacer(Modifier.height(6.dp))
             Text(
-                if (engine == "gemini") "Gemini · $geminiVoice" else "Phone voice",
+                when (engine) { "gemini" -> "Gemini · $geminiVoice"; "local" -> "Human · $localVoice"; else -> "Phone voice" },
                 fontSize = 20.sp, fontWeight = FontWeight.Medium, color = Ink
             )
         }
@@ -638,8 +639,17 @@ private fun VoiceScreen(onBack: () -> Unit) {
     val engine by Prefs.engine.collectAsStateWithLifecycle()
     val phoneVoice by Prefs.phoneVoice.collectAsStateWithLifecycle()
     val geminiVoice by Prefs.geminiVoice.collectAsStateWithLifecycle()
+    val localVoice by Prefs.localVoice.collectAsStateWithLifecycle()
+    val stt by Prefs.stt.collectAsStateWithLifecycle()
+    val bargeIn by Prefs.bargeIn.collectAsStateWithLifecycle()
     val rate by Prefs.rate.collectAsStateWithLifecycle()
     val hasKey by InfernoState.hasKey.collectAsStateWithLifecycle()
+    val progress by ModelStore.progress.collectAsStateWithLifecycle()
+    val failed by ModelStore.failed.collectAsStateWithLifecycle()
+    val ttsInfo by InfernoState.ttsInfo.collectAsStateWithLifecycle()
+    val micRoute by InfernoState.micRoute.collectAsStateWithLifecycle()
+    val sttInfo by InfernoState.sttInfo.collectAsStateWithLifecycle()
+    var tick by remember { mutableStateOf(0) } // bumps when a download finishes
 
     var ready by remember { mutableStateOf(false) }
     val speaker = remember { Speaker(ctx, scope) {} }
@@ -650,14 +660,52 @@ private fun VoiceScreen(onBack: () -> Unit) {
     val phoneVoices = remember(ready) { if (ready) speaker.phoneVoices() else emptyList() }
     val sample = "Hey, I'm Inferno. I'm ready to help you."
 
+    fun packLabel(p: ModelStore.Pack): String = when {
+        progress.containsKey(p.id) -> "downloading ${progress[p.id]}%"
+        p.id in failed -> "download failed, tap to retry"
+        ModelStore.installed(ctx, p.id) -> "ready"
+        else -> "${p.mb} MB download"
+    }
+
     Page("AI voice", onBack) {
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Pill("Phone voices", dark = engine == "phone") { Prefs.setEngine("phone") }
-            Pill("Gemini voices", dark = engine == "gemini") { Prefs.setEngine("gemini") }
+            Pill("Human", dark = engine == "local") { Prefs.setEngine("local") }
+            Pill("Gemini", dark = engine == "gemini") { Prefs.setEngine("gemini") }
+            Pill("Phone", dark = engine == "phone") { Prefs.setEngine("phone") }
         }
 
-        if (engine == "phone") {
+        if (engine == "local") {
+            Label("Human voices (offline)")
+            ModelStore.VOICES.forEach { v ->
+                val key = tick
+                val label = "${v.name} · ${v.about} · ${packLabel(v.pack)}"
+                VoiceRow(label, v.id == localVoice && ModelStore.installed(ctx, v.pack.id)) {
+                    Prefs.setLocalVoice(v.id)
+                    if (ModelStore.installed(ctx, v.pack.id)) {
+                        speaker.speak(sample, glasses = false, notifyWhenDone = false)
+                    } else {
+                        ModelStore.start(ctx, v.pack.id, v.pack.url) { ok ->
+                            tick++
+                            if (ok) scope.launch { speaker.speak(sample, glasses = false, notifyWhenDone = false) }
+                        }
+                    }
+                }
+            }
+            Label("Speed")
+            Slider(
+                value = rate,
+                onValueChange = { Prefs.setRate(it) },
+                valueRange = 0.7f..1.4f,
+                colors = SliderDefaults.colors(thumbColor = Ink, activeTrackColor = Ink)
+            )
+            if (ttsInfo.isNotEmpty()) Note("Last preview: $ttsInfo")
+            Note(
+                "Piper voices are small and quick. Kokoro voices are larger and meant to sound more natural, " +
+                    "but need more processing. Pick by how they run on your phone: the timing above shows it. " +
+                    "One download is shared by all voices of the same family."
+            )
+        } else if (engine == "phone") {
             Label("Choose a voice")
             if (phoneVoices.isEmpty()) {
                 Text(
@@ -666,8 +714,7 @@ private fun VoiceScreen(onBack: () -> Unit) {
                 )
             }
             phoneVoices.forEach { (id, label) ->
-                val selected = id == phoneVoice
-                VoiceRow(label, selected) {
+                VoiceRow(label, id == phoneVoice) {
                     Prefs.setPhoneVoice(id)
                     speaker.speak(sample, glasses = false, notifyWhenDone = false)
                 }
@@ -690,10 +737,30 @@ private fun VoiceScreen(onBack: () -> Unit) {
                 }
             }
             Note(
-                if (hasKey) "More natural, but each reply uses an extra Gemini request and takes a moment longer. If it fails, Inferno falls back to the phone voice."
+                if (hasKey) "Natural, but each reply uses an extra Gemini request and takes longer. If it fails, Inferno falls back to the phone voice."
                 else "Sign in or add an API key to hear these."
             )
         }
+
+        Label("Speech recognition")
+        VoiceRow("Gemini hears the audio · no download", stt == "gemini") { Prefs.setStt("gemini") }
+        ModelStore.WHISPER.forEach { p ->
+            val key = tick
+            VoiceRow("${p.name} · ${packLabel(p)}", stt == p.id && ModelStore.installed(ctx, p.id)) {
+                if (ModelStore.installed(ctx, p.id)) Prefs.setStt(p.id)
+                else ModelStore.start(ctx, p.id, p.url) { ok -> tick++; if (ok) Prefs.setStt(p.id) }
+            }
+        }
+        Note(
+            "Whisper runs on the phone only after you say Hey Inferno, never while waiting. " +
+                "Base is multilingual and the better bet for Indian English; tiny is faster. " +
+                "After a command, the timing appears here so you can compare them."
+        )
+        if (sttInfo.isNotEmpty()) Note("Last command: $sttInfo")
+
+        Label("Glasses")
+        VoiceRow("Say Hey Inferno to interrupt a reply (glasses only)", bargeIn) { Prefs.setBargeIn(!bargeIn) }
+        if (micRoute.isNotEmpty()) Note("Microphone in use: $micRoute")
         Spacer(Modifier.height(32.dp))
     }
 }

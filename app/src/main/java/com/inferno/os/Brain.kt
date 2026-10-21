@@ -10,6 +10,23 @@ import java.time.format.DateTimeFormatter
 class Brain(private val actions: PhoneActions) {
     private val history = JSONArray()
 
+    /** The user cut the reply short; note it so the next turn knows. */
+    fun noteInterrupted() {
+        for (i in history.length() - 1 downTo 0) {
+            val o = history.getJSONObject(i)
+            if (o.optString("role") != "model") continue
+            val parts = o.optJSONArray("parts") ?: return
+            for (j in parts.length() - 1 downTo 0) {
+                val part = parts.getJSONObject(j)
+                if (part.has("text")) {
+                    part.put("text", part.getString("text") + " [the user interrupted before this was finished]")
+                    return
+                }
+            }
+            return
+        }
+    }
+
     suspend fun ask(text: String): String = send(Gemini.userText(text), false)
 
     /** A spoken command as WAV audio. Gemini hears it directly. */

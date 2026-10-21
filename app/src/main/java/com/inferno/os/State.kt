@@ -14,6 +14,10 @@ object InfernoState {
     val status = MutableStateFlow("Starting…")
     val serviceOn = MutableStateFlow(false)
     val glasses = MutableStateFlow(false)
+    /** Which microphone Android actually used for listening. */
+    val micRoute = MutableStateFlow("")
+    val ttsInfo = MutableStateFlow("")
+    val sttInfo = MutableStateFlow("")
     val listening = MutableStateFlow(false)
     val recording = MutableStateFlow(false)
     val busy = MutableStateFlow(false)

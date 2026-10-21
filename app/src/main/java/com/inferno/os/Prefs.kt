@@ -13,6 +13,10 @@ object Prefs {
     val phoneVoice = MutableStateFlow("")
     val geminiVoice = MutableStateFlow("Kore")
     val rate = MutableStateFlow(1.0f)
+    val localVoice = MutableStateFlow("amy")
+    /** "gemini" = send the command to Gemini as audio; otherwise a Whisper pack id from ModelStore.WHISPER. */
+    val stt = MutableStateFlow("gemini")
+    val bargeIn = MutableStateFlow(true)
     val dailyLimit = MutableStateFlow(250)
     val quiet = MutableStateFlow(true)
     val accountName = MutableStateFlow("")
@@ -26,6 +30,9 @@ object Prefs {
         phoneVoice.value = p.getString("phone_voice", "") ?: ""
         geminiVoice.value = p.getString("gemini_voice", "Kore") ?: "Kore"
         rate.value = p.getFloat("rate", 1.0f)
+        localVoice.value = p.getString("local_voice", "amy") ?: "amy"
+        stt.value = p.getString("stt", "gemini") ?: "gemini"
+        bargeIn.value = p.getBoolean("barge_in", true)
         dailyLimit.value = p.getInt("daily_limit", 250)
         quiet.value = p.getBoolean("quiet", true)
         accountName.value = p.getString("account_name", "") ?: ""
@@ -46,6 +53,9 @@ object Prefs {
     fun setEngine(v: String) { engine.value = v; edit { it.putString("engine", v) } }
     fun setPhoneVoice(v: String) { phoneVoice.value = v; edit { it.putString("phone_voice", v) } }
     fun setGeminiVoice(v: String) { geminiVoice.value = v; edit { it.putString("gemini_voice", v) } }
+    fun setLocalVoice(v: String) { localVoice.value = v; edit { it.putString("local_voice", v) } }
+    fun setStt(v: String) { stt.value = v; edit { it.putString("stt", v) } }
+    fun setBargeIn(v: Boolean) { bargeIn.value = v; edit { it.putBoolean("barge_in", v) } }
     fun setRate(v: Float) { rate.value = v; edit { it.putFloat("rate", v) } }
     fun setLimit(v: Int) { dailyLimit.value = v; edit { it.putInt("daily_limit", v) } }
     fun setQuiet(v: Boolean) { quiet.value = v; edit { it.putBoolean("quiet", v) } }

@@ -23,6 +23,17 @@ jobs:
         with:
           gradle-version: 8.9
 
+      - name: Fetch sherpa-onnx library
+        run: |
+          mkdir -p app/libs
+          curl -fsSL -o app/libs/sherpa-onnx.aar https://github.com/k2-fsa/sherpa-onnx/releases/download/v1.13.7/sherpa-onnx-1.13.7.aar
+          ls -l app/libs
+
+      - name: Unit tests
+        id: tests
+        continue-on-error: true
+        run: gradle :app:testDebugUnitTest --console=plain 2>&1 | tee test.log; exit ${PIPESTATUS[0]}
+
       - name: Build debug APK
         id: build
         continue-on-error: true
@@ -33,13 +44,15 @@ jobs:
           mkdir -p out
           grep -E "^e: |error:|FAILED|BUILD" build.log | head -80 > out/errors.txt || true
           tail -150 build.log > out/log-tail.txt
+          tail -80 test.log > out/test-log.txt || true
+          cp app/build/test-results/testDebugUnitTest/*.xml out/ 2>/dev/null || true
           [ -f app/build/outputs/apk/debug/app-debug.apk ] && cp app/build/outputs/apk/debug/app-debug.apk out/InfernoOS.apk || true
           git config user.name "build-bot"
           git config user.email "build-bot@users.noreply.github.com"
           git checkout --orphan build-output
           git rm -rf . > /dev/null 2>&1 || true
           cp out/* . 
-          rm -rf out build.log
+          rm -rf out build.log test.log
           git add -A
           git commit -m "Build output for ${{ github.sha }}"
           git push -f origin build-output

@@ -10,6 +10,8 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.util.Locale
@@ -97,7 +99,18 @@ class Speaker(
         val id = "s$seq"
         currentId = id
         notify = notifyWhenDone
-        if (Prefs.engine.value == "gemini" && InfernoState.hasKey.value) {
+        val local = ModelStore.voice(Prefs.localVoice.value)
+        if (Prefs.engine.value == "local" && local != null && ModelStore.installed(ctx, local.pack.id)) {
+            job = scope.launch(Dispatchers.Default) {
+                try {
+                    speakLocal(local, text, glasses, id)
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Throwable) {
+                    handler.post { if (currentId == id) speakPhone(text, glasses, id) }
+                }
+            }
+        } else if (Prefs.engine.value == "gemini" && InfernoState.hasKey.value) {
             job = scope.launch {
                 try {
                     val pcm = Gemini.tts(text, Prefs.geminiVoice.value)
@@ -119,6 +132,53 @@ class Speaker(
         currentId = ""
         try { tts?.stop() } catch (e: Exception) { }
         releaseTrack()
+    }
+
+    /** Streams offline speech: audio starts after the first sentence is ready, not after the whole reply. */
+    private fun speakLocal(v: ModelStore.Voice, text: String, glasses: Boolean, id: String) {
+        var tr: AudioTrack? = null
+        var written = 0L
+        var rate = 0
+        val attrs = AudioAttributes.Builder()
+            .setUsage(if (glasses) AudioAttributes.USAGE_VOICE_COMMUNICATION else AudioAttributes.USAGE_ASSISTANT)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+            .build()
+        val stats = LocalTts.stream(ctx, v, text, Prefs.rate.value) { samples, sr ->
+            if (currentId != id) return@stream false
+            if (tr == null) {
+                rate = sr
+                val min = AudioTrack.getMinBufferSize(sr, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+                val t = AudioTrack.Builder()
+                    .setAudioAttributes(attrs)
+                    .setAudioFormat(
+                        AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                            .setSampleRate(sr).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build()
+                    )
+                    .setBufferSizeInBytes(maxOf(min, sr))
+                    .setTransferMode(AudioTrack.MODE_STREAM)
+                    .build()
+                t.play()
+                tr = t
+                track = t
+            }
+            val pcm = Pcm.floatToShort(samples)
+            tr?.write(pcm, 0, pcm.size)
+            written += pcm.size
+            true
+        }
+        val t = tr
+        if (stats == null || t == null) {
+            handler.post { if (currentId == id) speakPhone(text, glasses, id) }
+            return
+        }
+        InfernoState.ttsInfo.value = "first audio ${stats.firstAudioMs} ms · ${"%.2f".format(stats.rtf)}x real time"
+        // Wait for the buffered audio to finish playing (or for an interruption).
+        val end = System.currentTimeMillis() + written * 1000 / rate + 2000
+        while (currentId == id && System.currentTimeMillis() < end) {
+            if (t.playbackHeadPosition >= written) break
+            Thread.sleep(30)
+        }
+        handler.post { finish(id) }
     }
 
     private fun speakPhone(text: String, glasses: Boolean, id: String) {
