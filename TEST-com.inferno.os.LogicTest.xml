@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.inferno.os.LogicTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-22T22:32:18" hostname="runnervm8k3b6" time="0.035">
+  <properties/>
+  <testcase name="wakeRejectsOrdinaryTalk" classname="com.inferno.os.LogicTest" time="0.015"/>
+  <testcase name="wakeHeardVariants" classname="com.inferno.os.LogicTest" time="0.0"/>
+  <testcase name="gateSkipsSteadyNoiseAndOpensOnSpeech" classname="com.inferno.os.LogicTest" time="0.001"/>
+  <testcase name="gateAdaptsToLoudRoom" classname="com.inferno.os.LogicTest" time="0.001"/>
+  <testcase name="stripWake" classname="com.inferno.os.LogicTest" time="0.002"/>
+  <testcase name="rmsAndConcat" classname="com.inferno.os.LogicTest" time="0.008"/>
+  <testcase name="wavRoundTrip" classname="com.inferno.os.LogicTest" time="0.002"/>
+  <testcase name="floatConversionClamps" classname="com.inferno.os.LogicTest" time="0.002"/>
+  <testcase name="sentenceSplit" classname="com.inferno.os.LogicTest" time="0.002"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,238 @@
+1<?xml version="1.0" encoding="utf-8"?>
+2<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+3    package="com.inferno.os"
+4    android:versionCode="4"
+5    android:versionName="4.0" >
+6
+7    <uses-sdk
+8        android:minSdkVersion="31"
+9        android:targetSdkVersion="35" />
+10
+11    <uses-permission android:name="android.permission.INTERNET" />
+11-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:4:5-67
+11-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:4:22-64
+12    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+12-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:5:5-71
+12-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:5:22-68
+13    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+13-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:6:5-80
+13-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:6:22-77
+14    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
+14-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:7:5-76
+14-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:7:22-73
+15    <uses-permission android:name="android.permission.READ_CONTACTS" />
+15-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:8:5-72
+15-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:8:22-69
+16    <uses-permission android:name="android.permission.CALL_PHONE" />
+16-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:9:5-69
+16-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:9:22-66
+17    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+17-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:10:5-77
+17-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:10:22-74
+18    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+18-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:11:5-77
+18-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:11:22-74
+19    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
+19-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:12:5-88
+19-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:12:22-85
+20    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+20-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:13:5-78
+20-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:13:22-75
+21
+22    <queries>
+22-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:15:5-21:15
+23        <package android:name="com.whatsapp" />
+23-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:16:9-48
+23-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:16:18-45
+24        <package android:name="com.whatsapp.w4b" />
+24-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:17:9-52
+24-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:17:18-49
+25
+26        <intent>
+26-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:18:9-20:18
+27            <action android:name="android.speech.RecognitionService" />
+27-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:19:13-72
+27-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:19:21-69
+28        </intent>
+29    </queries>
+30
+31    <permission
+31-->[androidx.core:core:1.15.0] /home/runner/.gradle/caches/8.9/transforms/5b266e964a5ecceaeb29d258206a0758/transformed/core-1.15.0/AndroidManifest.xml:22:5-24:47
+32        android:name="com.inferno.os.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+32-->[androidx.core:core:1.15.0] /home/runner/.gradle/caches/8.9/transforms/5b266e964a5ecceaeb29d258206a0758/transformed/core-1.15.0/AndroidManifest.xml:23:9-81
+33        android:protectionLevel="signature" />
+33-->[androidx.core:core:1.15.0] /home/runner/.gradle/caches/8.9/transforms/5b266e964a5ecceaeb29d258206a0758/transformed/core-1.15.0/AndroidManifest.xml:24:9-44
+34
+35    <uses-permission android:name="com.inferno.os.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" />
+35-->[androidx.core:core:1.15.0] /home/runner/.gradle/caches/8.9/transforms/5b266e964a5ecceaeb29d258206a0758/transformed/core-1.15.0/AndroidManifest.xml:26:5-97
+35-->[androidx.core:core:1.15.0] /home/runner/.gradle/caches/8.9/transforms/5b266e964a5ecceaeb29d258206a0758/transformed/core-1.15.0/AndroidManifest.xml:26:22-94
+36
+37    <application
+37-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:23:5-53:19
+38        android:allowBackup="false"
+38-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:24:9-36
+39        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
+39-->[androidx.core:core:1.15.0] /home/runner/.gradle/caches/8.9/transforms/5b266e964a5ecceaeb29d258206a0758/transformed/core-1.15.0/AndroidManifest.xml:28:18-86
+40        android:debuggable="true"
+41        android:extractNativeLibs="false"
+42        android:icon="@android:drawable/sym_def_app_icon"
+42-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:25:9-58
+43        android:label="Inferno OS"
+43-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:26:9-35
+44        android:theme="@style/Theme.Inferno" >
+44-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:27:9-45
+45        <activity
+45-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:29:9-37:20
+46            android:name="com.inferno.os.MainActivity"
+46-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:30:13-41
+47            android:exported="true"
+47-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:31:13-36
+48            android:windowSoftInputMode="adjustResize" >
+48-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:32:13-55
+49            <intent-filter>
+49-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:33:13-36:29
+50                <action android:name="android.intent.action.MAIN" />
+50-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:34:17-69
+50-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:34:25-66
+51
+52                <category android:name="android.intent.category.LAUNCHER" />
+52-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:35:17-77
+52-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:35:27-74
+53            </intent-filter>
+54        </activity>
+55
+56        <service
+56-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:39:9-42:58
+57            android:name="com.inferno.os.VoiceService"
+57-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:40:13-41
+58            android:exported="false"
+58-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:41:13-37
+59            android:foregroundServiceType="microphone" />
+59-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:42:13-55
+60        <service
+60-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:44:9-52:19
+61            android:name="com.inferno.os.WhatsAppListener"
+61-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:45:13-45
+62            android:exported="true"
+62-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:46:13-36
+63            android:label="Inferno OS"
+63-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:47:13-39
+64            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" >
+64-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:48:13-87
+65            <intent-filter>
+65-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:49:13-51:29
+66                <action android:name="android.service.notification.NotificationListenerService" />
+66-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:50:17-99
+66-->/home/runner/work/inferno/inferno/app/src/main/AndroidManifest.xml:50:25-96
+67            </intent-filter>
+68        </service>
+69
+70        <activity
+70-->[com.google.android.gms:play-services-auth:21.2.0] /home/runner/.gradle/caches/8.9/transforms/7d1650c7d6be86675a59d38927c611fb/transformed/play-services-auth-21.2.0/AndroidManifest.xml:23:9-27:75
+71            android:name="com.google.android.gms.auth.api.signin.internal.SignInHubActivity"
+71-->[com.google.android.gms:play-services-auth:21.2.0] /home/runner/.gradle/caches/8.9/transforms/7d1650c7d6be86675a59d38927c611fb/transformed/play-services-auth-21.2.0/AndroidManifest.xml:24:13-93
+72            android:excludeFromRecents="true"
+72-->[com.google.android.gms:play-services-auth:21.2.0] /home/runner/.gradle/caches/8.9/transforms/7d1650c7d6be86675a59d38927c611fb/transformed/play-services-auth-21.2.0/AndroidManifest.xml:25:13-46
+73            android:exported="false"
+73-->[com.google.android.gms:play-services-auth:21.2.0] /home/runner/.gradle/caches/8.9/transforms/7d1650c7d6be86675a59d38927c611fb/transformed/play-services-auth-21.2.0/AndroidManifest.xml:26:13-37
+74            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+74-->[com.google.android.gms:play-services-auth:21.2.0] /home/runner/.gradle/caches/8.9/transforms/7d1650c7d6be86675a59d38927c611fb/transformed/play-services-auth-21.2.0/AndroidManifest.xml:27:13-72
+75        <!--
+76            Service handling Google Sign-In user revocation. For apps that do not integrate with
+77            Google Sign-In, this service will never be started.
+78        -->
+79        <service
+79-->[com.google.android.gms:play-services-auth:21.2.0] /home/runner/.gradle/caches/8.9/transforms/7d1650c7d6be86675a59d38927c611fb/transformed/play-services-auth-21.2.0/AndroidManifest.xml:33:9-37:51
+80            android:name="com.google.android.gms.auth.api.signin.RevocationBoundService"
+80-->[com.google.android.gms:play-services-auth:21.2.0] /home/runner/.gradle/caches/8.9/transforms/7d1650c7d6be86675a59d38927c611fb/transformed/play-services-auth-21.2.0/AndroidManifest.xml:34:13-89
+81            android:exported="true"
+81-->[com.google.android.gms:play-services-auth:21.2.0] /home/runner/.gradle/caches/8.9/transforms/7d1650c7d6be86675a59d38927c611fb/transformed/play-services-auth-21.2.0/AndroidManifest.xml:35:13-36
+82            android:permission="com.google.android.gms.auth.api.signin.permission.REVOCATION_NOTIFICATION"
+82-->[com.google.android.gms:play-services-auth:21.2.0] /home/runner/.gradle/caches/8.9/transforms/7d1650c7d6be86675a59d38927c611fb/transformed/play-services-auth-21.2.0/AndroidManifest.xml:36:13-107
+83            android:visibleToInstantApps="true" />
+83-->[com.google.android.gms:play-services-auth:21.2.0] /home/runner/.gradle/caches/8.9/transforms/7d1650c7d6be86675a59d38927c611fb/transformed/play-services-auth-21.2.0/AndroidManifest.xml:37:13-48
+84
+85        <activity
+85-->[com.google.android.gms:play-services-base:18.3.0] /home/runner/.gradle/caches/8.9/transforms/9901c6091a0bad5d4f94816b8b357828/transformed/play-services-base-18.3.0/AndroidManifest.xml:20:9-22:45
+86            android:name="com.google.android.gms.common.api.GoogleApiActivity"
+86-->[com.google.android.gms:play-services-base:18.3.0] /home/runner/.gradle/caches/8.9/transforms/9901c6091a0bad5d4f94816b8b357828/transformed/play-services-base-18.3.0/AndroidManifest.xml:20:19-85
+87            android:exported="false"
+87-->[com.google.android.gms:play-services-base:18.3.0] /home/runner/.gradle/caches/8.9/transforms/9901c6091a0bad5d4f94816b8b357828/transformed/play-services-base-18.3.0/AndroidManifest.xml:22:19-43
+88            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+88-->[com.google.android.gms:play-services-base:18.3.0] /home/runner/.gradle/caches/8.9/transforms/9901c6091a0bad5d4f94816b8b357828/transformed/play-services-base-18.3.0/AndroidManifest.xml:21:19-78
+89
+90        <meta-data
+90-->[com.google.android.gms:play-services-basement:18.3.0] /home/runner/.gradle/caches/8.9/transforms/f962b79784cc23c23eb1d9f437dd403e/transformed/play-services-basement-18.3.0/AndroidManifest.xml:21:9-23:69
+91            android:name="com.google.android.gms.version"
+91-->[com.google.android.gms:play-services-basement:18.3.0] /home/runner/.gradle/caches/8.9/transforms/f962b79784cc23c23eb1d9f437dd403e/transformed/play-services-basement-18.3.0/AndroidManifest.xml:22:13-58
+92            android:value="@integer/google_play_services_version" />
+92-->[com.google.android.gms:play-services-basement:18.3.0] /home/runner/.gradle/caches/8.9/transforms/f962b79784cc23c23eb1d9f437dd403e/transformed/play-services-basement-18.3.0/AndroidManifest.xml:23:13-66
+93
+94        <provider
+94-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.9/transforms/0bf9683449d25625e5bbe147e089bcb0/transformed/emoji2-1.3.0/AndroidManifest.xml:24:9-32:20
+95            android:name="androidx.startup.InitializationProvider"
+95-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.9/transforms/0bf9683449d25625e5bbe147e089bcb0/transformed/emoji2-1.3.0/AndroidManifest.xml:25:13-67
+96            android:authorities="com.inferno.os.androidx-startup"
+96-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.9/transforms/0bf9683449d25625e5bbe147e089bcb0/transformed/emoji2-1.3.0/AndroidManifest.xml:26:13-68
+97            android:exported="false" >
+97-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.9/transforms/0bf9683449d25625e5bbe147e089bcb0/transformed/emoji2-1.3.0/AndroidManifest.xml:27:13-37
+98            <meta-data
+98-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.9/transforms/0bf9683449d25625e5bbe147e089bcb0/transformed/emoji2-1.3.0/AndroidManifest.xml:29:13-31:52
+99                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+99-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.9/transforms/0bf9683449d25625e5bbe147e089bcb0/transformed/emoji2-1.3.0/AndroidManifest.xml:30:17-75
+100                android:value="androidx.startup" />
+100-->[androidx.emoji2:emoji2:1.3.0] /home/runner/.gradle/caches/8.9/transforms/0bf9683449d25625e5bbe147e089bcb0/transformed/emoji2-1.3.0/AndroidManifest.xml:31:17-49
+101            <meta-data
+101-->[androidx.lifecycle:lifecycle-process:2.8.7] /home/runner/.gradle/caches/8.9/transforms/be6d9c90a625e285a04cfa9b7746043b/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:29:13-31:52
+102                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+102-->[androidx.lifecycle:lifecycle-process:2.8.7] /home/runner/.gradle/caches/8.9/transforms/be6d9c90a625e285a04cfa9b7746043b/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:30:17-78
+103                android:value="androidx.startup" />
+103-->[androidx.lifecycle:lifecycle-process:2.8.7] /home/runner/.gradle/caches/8.9/transforms/be6d9c90a625e285a04cfa9b7746043b/transformed/lifecycle-process-2.8.7/AndroidManifest.xml:31:17-49
+104            <meta-data
+104-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:29:13-31:52
+105                android:name="androidx.profileinstaller.ProfileInstallerInitializer"
+105-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:30:17-85
+106                android:value="androidx.startup" />
+106-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:31:17-49
+107        </provider>
+108
+109        <receiver
+109-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:34:9-52:20
+110            android:name="androidx.profileinstaller.ProfileInstallReceiver"
+110-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:35:13-76
+111            android:directBootAware="false"
+111-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:36:13-44
+112            android:enabled="true"
+112-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:37:13-35
+113            android:exported="true"
+113-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:38:13-36
+114            android:permission="android.permission.DUMP" >
+114-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:39:13-57
+115            <intent-filter>
+115-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:40:13-42:29
+116                <action android:name="androidx.profileinstaller.action.INSTALL_PROFILE" />
+116-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:17-91
+116-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:41:25-88
+117            </intent-filter>
+118            <intent-filter>
+118-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:43:13-45:29
+119                <action android:name="androidx.profileinstaller.action.SKIP_FILE" />
+119-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:17-85
+119-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:44:25-82
+120            </intent-filter>
+121            <intent-filter>
+121-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:46:13-48:29
+122                <action android:name="androidx.profileinstaller.action.SAVE_PROFILE" />
+122-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:17-88
+122-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:47:25-85
+123            </intent-filter>
+124            <intent-filter>
+124-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:49:13-51:29
+125                <action android:name="androidx.profileinstaller.action.BENCHMARK_OPERATION" />
+125-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:17-95
+125-->[androidx.profileinstaller:profileinstaller:1.3.1] /home/runner/.gradle/caches/8.9/transforms/15dd328c82bad213991a96a5928ca9ca/transformed/profileinstaller-1.3.1/AndroidManifest.xml:50:25-92
+126            </intent-filter>
+127        </receiver>
+128    </application>
+129
+130</manifest>
