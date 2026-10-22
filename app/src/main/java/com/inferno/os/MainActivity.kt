@@ -407,6 +407,12 @@ private fun Home(onProfile: () -> Unit, onRecordings: () -> Unit) {
                     fontSize = 18.sp, lineHeight = 26.sp, color = Color(0xFF3A3A3A)
                 )
             }
+            var crash by remember { mutableStateOf(CrashLog.last()) }
+            if (crash.isNotEmpty()) {
+                Spacer(Modifier.height(10.dp))
+                Text("Last crash (tap to dismiss):\n" + crash.take(900), fontSize = 11.sp, color = Color(0xFFB00020),
+                    modifier = Modifier.clickable { CrashLog.clear(); crash = "" })
+            }
 
             if (!hasKey) {
                 Spacer(Modifier.height(16.dp))
