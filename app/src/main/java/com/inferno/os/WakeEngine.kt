@@ -195,7 +195,8 @@ class WakeEngine(modelDir: File, private val cb: Callback) {
                     }
                 }
             }
-        } catch (e: Exception) {
+        } catch (e: Throwable) {
+            CrashLog.note("wake thread", e)
             if (token == my) cb.onFailure()
         } finally {
             try { ar.stop() } catch (e: Exception) { }

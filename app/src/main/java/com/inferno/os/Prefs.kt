@@ -37,6 +37,7 @@ object Prefs {
         quiet.value = p.getBoolean("quiet", true)
         accountName.value = p.getString("account_name", "") ?: ""
         accountEmail.value = p.getString("account_email", "") ?: ""
+        CrashLog.install(ctx)
         Keys.init(ctx)
         Usage.init(ctx)
         GoogleAuth.init(ctx)
