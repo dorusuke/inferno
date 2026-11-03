@@ -1,4 +1,4 @@
-# Inferno OS v2
+# Suductive OS
 
 Android app: say "Hey Inferno", ask anything, call people, read and send WhatsApp, record conversations and get a brief.
 

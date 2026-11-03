@@ -483,7 +483,7 @@ private fun Home(onProfile: () -> Unit, onRecordings: () -> Unit) {
                     Spacer(Modifier.height(14.dp))
                 }
                 if (reply.isNotBlank()) {
-                    Text("Inferno", color = Mute, fontSize = 13.sp)
+                    Text("Suductive OS", color = Mute, fontSize = 13.sp)
                     Text(reply, fontSize = 18.sp, lineHeight = 26.sp, color = Ink)
                 }
             }

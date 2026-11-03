@@ -514,7 +514,7 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
 
     private fun createChannel() {
         getSystemService(NotificationManager::class.java)
-            .createNotificationChannel(NotificationChannel(CHANNEL, "Inferno", NotificationManager.IMPORTANCE_LOW))
+            .createNotificationChannel(NotificationChannel(CHANNEL, "Suductive OS", NotificationManager.IMPORTANCE_LOW))
     }
 
     private fun buildNotification(text: String): Notification {
@@ -523,7 +523,7 @@ class VoiceService : Service(), PhoneActions.RecordingControl {
         )
         val b = Notification.Builder(this, CHANNEL)
             .setSmallIcon(android.R.drawable.ic_btn_speak_now)
-            .setContentTitle("Inferno")
+            .setContentTitle("Suductive OS")
             .setContentText(text)
             .setContentIntent(open)
             .setOngoing(true)
