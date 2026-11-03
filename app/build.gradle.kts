@@ -21,7 +21,7 @@ android {
         targetSdk = 35
         versionCode = 4
         versionName = "4.0"
-        ndk { abiFilters += listOf("arm64-v8a") }
+        ndk { abiFilters += listOf(if (project.hasProperty("emu")) "x86_64" else "arm64-v8a") }
         buildConfigField("String", "GEMINI_API_KEY", "\"${localProps.getProperty("GEMINI_API_KEY", "")}\"")
         buildConfigField("String", "GEMINI_MODEL", "\"${localProps.getProperty("GEMINI_MODEL", "gemini-3.8-flash")}\"")
     }

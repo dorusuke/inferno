@@ -39,11 +39,21 @@ jobs:
         continue-on-error: true
         run: gradle :app:assembleDebug --console=plain 2>&1 | tee build.log; exit ${PIPESTATUS[0]}
 
+      - name: Build emulator (x86_64) APK
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk phone.apk
+          gradle :app:assembleDebug -Pemu --console=plain 2>&1 | tail -30 > emu.log
+          cp app/build/outputs/apk/debug/app-debug.apk emu.apk
+          cp phone.apk app/build/outputs/apk/debug/app-debug.apk
+
       - name: Save log and APK to a branch
         run: |
           mkdir -p out
           grep -E "^e: |error:|FAILED|BUILD" build.log | head -80 > out/errors.txt || true
           tail -150 build.log > out/log-tail.txt
+          [ -f emu.apk ] && cp emu.apk out/InfernoOS-emulator.apk || true
           tail -80 test.log > out/test-log.txt || true
           cp app/build/test-results/testDebugUnitTest/*.xml out/ 2>/dev/null || true
           [ -f app/build/outputs/apk/debug/app-debug.apk ] && cp app/build/outputs/apk/debug/app-debug.apk out/InfernoOS.apk || true
@@ -52,7 +62,7 @@ jobs:
           git checkout --orphan build-output
           git rm -rf . > /dev/null 2>&1 || true
           cp out/* . 
-          rm -rf out build.log test.log
+          rm -rf out build.log test.log phone.apk emu.apk emu.log
           git add -A
           git commit -m "Build output for ${{ github.sha }}"
           git push -f origin build-output
